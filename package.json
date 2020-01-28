@@ -1,0 +1,35 @@
+{
+  "name": "jsonschema-to-bsonschema",
+  "version": "0.0.1",
+  "description": "Converts JSON schemas to BSON schemas for MongoDB validators.",
+  "main": "index.js",
+  "scripts": {
+    "test": "test",
+    "run": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/evergreen-lee-campbell/jsonschema-to-bsonschema.git"
+  },
+  "keywords": [
+    "json",
+    "convert",
+    "bson",
+    "schema",
+    "validator",
+    "mongodb",
+    "mongo"
+  ],
+  "author": "evergreen-lee-campbell",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/evergreen-lee-campbell/jsonschema-to-bsonschema/issues"
+  },
+  "homepage": "https://github.com/evergreen-lee-campbell/jsonschema-to-bsonschema#readme",
+  "dependencies": {
+    "glob": "^7.1.6",
+    "json-schema-ref-parser": "^7.1.3",
+    "jsonschema": "^1.2.5",
+    "yargs": "^15.1.0"
+  }
+}
