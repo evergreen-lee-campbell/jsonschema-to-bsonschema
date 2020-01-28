@@ -65,10 +65,7 @@ module.exports = {
                     if (err) return reject(err);
                     
                     refParser.dereference(JSON.parse(fileData.toString('utf8')), (err, schema) => {
-                        console.log('Deferencing complete!');
-                        
                         if (err) {
-                            console.log('An error occurred');
                             return reject(err);
                         }
 
