@@ -1,2 +1,1 @@
-declare function convert(inputGlob: string, outputDirectory: string, options: any): Promise<void>;
-export default convert;
+export declare function convert(inputGlob: string, outputDirectory: string, options: any): Promise<void>;

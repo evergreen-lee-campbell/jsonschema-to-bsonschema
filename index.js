@@ -47,9 +47,6 @@ var glob = __importStar(require("glob"));
 var fs = __importStar(require("fs"));
 var refParser = __importStar(require("json-schema-ref-parser"));
 var JSONSchema = __importStar(require("json-schema"));
-function _regExpEscape(str) {
-    return String(str).replace(/[\\^$*+?.()|[\]{}]/g, '\\$&');
-}
 function _transformSchemas(fileList) {
     return __awaiter(this, void 0, void 0, function () {
         var _this = this;
@@ -194,4 +191,4 @@ function convert(inputGlob, outputDirectory, options) {
         });
     });
 }
-exports.default = convert;
+exports.convert = convert;
