@@ -1,5 +1,3 @@
-# Introduction
+# jsonschema-to-bsonschema
 
 ## Quick Start
-
-# jsonschema-to-bsonschema
