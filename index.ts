@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as refParser from 'json-schema-ref-parser';
 import * as JSONSchema from 'json-schema';
 
-async function _transformSchemas(fileList: Array<string>): Promise<void> {
+async function _transformSchemas(fileList: Array<string>, outputDirectory?: string): Promise<void> {
     return new Promise((resolve, reject) => {
         let completedSchemas = 0;
         fileList.forEach(fileName => {
@@ -24,7 +24,11 @@ async function _transformSchemas(fileList: Array<string>): Promise<void> {
                 
                 delete schema.definitions;
 
-                fs.writeFileSync(fileName.split('.json')[0] + ".bson", JSON.stringify(schema, null, 4));
+                if (outputDirectory) {
+                    // dunno yet
+                } else {
+                    fs.writeFileSync(fileName.split('.json')[0] + ".bson", JSON.stringify(schema, null, 4));
+                }
 
                 completedSchemas++;
             
@@ -86,7 +90,7 @@ async function _validateInputSchemas(fileList: Array<string>, options?: { breakO
     });
 }    
 
-export async function convert (inputGlob: string, outputDirectory: string, options: any): Promise<void> {
+export async function convert (inputGlob: string, outputDirectory?: string, options?: any): Promise<void> {
     let _fileList: Array<string> = [];
     
     if (!inputGlob) {
@@ -126,7 +130,7 @@ export async function convert (inputGlob: string, outputDirectory: string, optio
     // once we've passed validation, create the BSON schemas from each of the JSON schemas...
     console.info('Beginning JSON -> BSON conversion.');
 
-    _transformSchemas(_fileList).then(() => {
+    _transformSchemas(_fileList, outputDirectory).then(() => {
         console.log('Done!');
     }, (err: Error) => {
         console.error(err);

@@ -47,7 +47,7 @@ var glob = __importStar(require("glob"));
 var fs = __importStar(require("fs"));
 var refParser = __importStar(require("json-schema-ref-parser"));
 var JSONSchema = __importStar(require("json-schema"));
-function _transformSchemas(fileList) {
+function _transformSchemas(fileList, outputDirectory) {
     return __awaiter(this, void 0, void 0, function () {
         var _this = this;
         return __generator(this, function (_a) {
@@ -77,7 +77,12 @@ function _transformSchemas(fileList) {
                                             return [2 /*return*/, reject(new Error("Schema was not dereferenced."))];
                                         }
                                         delete schema.definitions;
-                                        fs.writeFileSync(fileName.split('.json')[0] + ".bson", JSON.stringify(schema, null, 4));
+                                        if (outputDirectory) {
+                                            // dunno yet
+                                        }
+                                        else {
+                                            fs.writeFileSync(fileName.split('.json')[0] + ".bson", JSON.stringify(schema, null, 4));
+                                        }
                                         completedSchemas++;
                                         if (completedSchemas === fileList.length) {
                                             resolve();
@@ -181,7 +186,7 @@ function convert(inputGlob, outputDirectory, options) {
                     }
                     // once we've passed validation, create the BSON schemas from each of the JSON schemas...
                     console.info('Beginning JSON -> BSON conversion.');
-                    _transformSchemas(_fileList).then(function () {
+                    _transformSchemas(_fileList, outputDirectory).then(function () {
                         console.log('Done!');
                     }, function (err) {
                         console.error(err);
