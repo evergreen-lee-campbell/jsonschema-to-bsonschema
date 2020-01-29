@@ -1,7 +1,2 @@
-declare namespace jsonschema2bsonschema {
-    export function release(): void;
-}
-
-declare function jsonschema2bsonschema(): any;
-
-export = jsonschema2bsonschema;
+declare function convert(inputGlob: string, outputDirectory: string, options: any): Promise<void>;
+export default convert;
