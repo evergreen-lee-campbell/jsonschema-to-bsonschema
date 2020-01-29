@@ -41,7 +41,7 @@ async function _transformSchemas(fileList: Array<string>, outputDirectory?: stri
 }
 
 async function _validateInputSchemas(fileList: Array<string>, options?: { breakOnSchemaValidationErrors: boolean, verbose: boolean }): Promise<{ valid: number, invalid: number }> {
-    const schema = JSON.parse(fs.readFileSync('./draft-04-schema.json').toString('utf8'));
+    const schema = JSON.parse(fs.readFileSync('~/draft-04-schema.json').toString('utf8'));
     return new Promise((resolve, reject) => {
         let validCount = 0;
         let invalidCount = 0;
