@@ -8,6 +8,7 @@ async function _transformSchemas(fileList: Array<string>, outputDirectory?: stri
         let completedSchemas = 0;
         fileList.forEach(fileName => {
             fs.readFile(fileName, async (err, fileData) => {
+                console.info('Reading ' + fileName);
                 if (err) return reject(err);
                 
                 let schema: refParser.JSONSchema | null = null;
@@ -15,22 +16,30 @@ async function _transformSchemas(fileList: Array<string>, outputDirectory?: stri
                 try {
                     schema = await refParser.default.dereference(JSON.parse(fileData.toString('utf8')));
                 } catch (ex) {
-
+                    return reject(ex);
                 }
 
                 if (!schema) {
+                    console.error('Schema was not dereferenced.');
                     return reject(new Error("Schema was not dereferenced."));
                 }
                 
                 delete schema.definitions;
-
+                
                 if (outputDirectory) {
                     // dunno yet
                 } else {
-                    fs.writeFileSync(fileName.split('.json')[0] + ".bson", JSON.stringify(schema, null, 4));
+                    try {
+                        let outputFileName = fileName.split('.json')[0] + ".bson";
+                        console.info('Writing file ' + outputFileName)
+                        fs.writeFileSync(outputFileName, JSON.stringify(schema, null, 4));
+                    } catch (ex) {
+                        return reject(ex);
+                    }
                 }
 
                 completedSchemas++;
+                console.info('Dereferenced ' + completedSchemas + ' of ' + fileList.length + ' schemas ');
             
                 if (completedSchemas === fileList.length) {
                     resolve();
@@ -92,18 +101,10 @@ async function _validateInputSchemas(fileList: Array<string>, options?: { breakO
 
 export async function convert (inputGlob: string, outputDirectory?: string, options?: any): Promise<void> {
     let _fileList: Array<string> = [];
-    
-    if (!inputGlob) {
-        console.info('No input file pattern specified, deafulting to all JSON files in this directory ("*.json").');
-        inputGlob = '*.json';
-    }
 
     if (!outputDirectory) {
         console.info('No output directory specified, outputting each converted BSON schema in the same directory as its source JSON.');
-        outputDirectory = '.';
     }
-
-    options;
     
     try {
         _fileList.push(...glob.sync(inputGlob));

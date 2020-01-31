@@ -55,10 +55,11 @@ function _transformSchemas(fileList, outputDirectory) {
                     var completedSchemas = 0;
                     fileList.forEach(function (fileName) {
                         fs.readFile(fileName, function (err, fileData) { return __awaiter(_this, void 0, void 0, function () {
-                            var schema, ex_1;
+                            var schema, ex_1, outputFileName;
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
                                     case 0:
+                                        console.info('Reading ' + fileName);
                                         if (err)
                                             return [2 /*return*/, reject(err)];
                                         schema = null;
@@ -71,9 +72,10 @@ function _transformSchemas(fileList, outputDirectory) {
                                         return [3 /*break*/, 4];
                                     case 3:
                                         ex_1 = _a.sent();
-                                        return [3 /*break*/, 4];
+                                        return [2 /*return*/, reject(ex_1)];
                                     case 4:
                                         if (!schema) {
+                                            console.error('Schema was not dereferenced.');
                                             return [2 /*return*/, reject(new Error("Schema was not dereferenced."))];
                                         }
                                         delete schema.definitions;
@@ -81,9 +83,17 @@ function _transformSchemas(fileList, outputDirectory) {
                                             // dunno yet
                                         }
                                         else {
-                                            fs.writeFileSync(fileName.split('.json')[0] + ".bson", JSON.stringify(schema, null, 4));
+                                            try {
+                                                outputFileName = fileName.split('.json')[0] + ".bson";
+                                                console.info('Writing file ' + outputFileName);
+                                                fs.writeFileSync(outputFileName, JSON.stringify(schema, null, 4));
+                                            }
+                                            catch (ex) {
+                                                return [2 /*return*/, reject(ex)];
+                                            }
                                         }
                                         completedSchemas++;
+                                        console.info('Dereferenced ' + completedSchemas + ' of ' + fileList.length + ' schemas ');
                                         if (completedSchemas === fileList.length) {
                                             resolve();
                                         }
@@ -152,15 +162,9 @@ function convert(inputGlob, outputDirectory, options) {
             switch (_a.label) {
                 case 0:
                     _fileList = [];
-                    if (!inputGlob) {
-                        console.info('No input file pattern specified, deafulting to all JSON files in this directory ("*.json").');
-                        inputGlob = '*.json';
-                    }
                     if (!outputDirectory) {
                         console.info('No output directory specified, outputting each converted BSON schema in the same directory as its source JSON.');
-                        outputDirectory = '.';
                     }
-                    options;
                     try {
                         _fileList.push.apply(_fileList, glob.sync(inputGlob));
                     }

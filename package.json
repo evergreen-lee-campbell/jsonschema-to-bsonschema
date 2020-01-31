@@ -1,12 +1,12 @@
 {
   "name": "jsonschema-to-bsonschema",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "Converts JSON schemas to BSON schemas for MongoDB validators.",
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
     "test": "test",
-    "run": "node index.js"
+    "cli": "node cli"
   },
   "repository": {
     "type": "git",
@@ -31,7 +31,9 @@
     "@types/glob": "^7.1.1",
     "@types/json-schema": "^7.0.4",
     "glob": "^7.1.6",
+    "json-schema": "^0.2.5",
     "json-schema-ref-parser": "^7.1.3",
-    "typescript": "^3.7.5"
+    "typescript": "^3.7.5",
+    "yargs": "^15.1.0"
   }
 }
