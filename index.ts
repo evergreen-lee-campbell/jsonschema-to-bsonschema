@@ -2,6 +2,7 @@ import * as glob from 'glob';
 import * as fs from 'fs';
 import * as refParser from 'json-schema-ref-parser';
 import * as JSONSchema from 'json-schema';
+import * as path from 'path';
 
 async function _transformSchemas(fileList: Array<string>, outputDirectory?: string): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -9,13 +10,22 @@ async function _transformSchemas(fileList: Array<string>, outputDirectory?: stri
         fileList.forEach(fileName => {
             fs.readFile(fileName, async (err, fileData) => {
                 console.info('Reading ' + fileName);
-                if (err) return reject(err);
-                
+                if (err) {
+                    console.error('Failed to read ' + fileName);
+                    return reject(err);
+                }
+
                 let schema: refParser.JSONSchema | null = null;
-                
+                let baseUrl = fileName.substring(0, fileName.lastIndexOf('/')) + '/';
+                console.log('Defaulting to the following baseUrl: ' + baseUrl);
+
                 try {
-                    schema = await refParser.default.dereference(JSON.parse(fileData.toString('utf8')));
+                    schema = await refParser.default.dereference(
+                        baseUrl,
+                        JSON.parse(fileData.toString('utf8')), 
+                        {});
                 } catch (ex) {
+                    console.error('Failed to dereference ' + fileName);
                     return reject(ex);
                 }
 
@@ -26,16 +36,19 @@ async function _transformSchemas(fileList: Array<string>, outputDirectory?: stri
                 
                 delete schema.definitions;
                 
-                if (outputDirectory) {
-                    // dunno yet
-                } else {
-                    try {
-                        let outputFileName = fileName.split('.json')[0] + ".bson";
-                        console.info('Writing file ' + outputFileName)
-                        fs.writeFileSync(outputFileName, JSON.stringify(schema, null, 4));
-                    } catch (ex) {
-                        return reject(ex);
-                    }
+                let documentName = fileName.split('.json')[0];
+                let outputFileName = (outputDirectory 
+                    ? outputDirectory + path.sep + documentName.split('/')[documentName.split('/').length - 1].split('.json')[0] 
+                    : documentName) 
+                    + '.bson';
+                
+                console.log('Outputting to: ' + outputFileName);
+
+                try {
+                    console.info('Writing file ' + outputFileName);
+                    fs.writeFileSync(outputFileName, JSON.stringify(schema, null, 4));
+                } catch (ex) {
+                    return reject(ex);
                 }
 
                 completedSchemas++;
@@ -61,6 +74,7 @@ async function _validateInputSchemas(fileList: Array<string>, options?: { breakO
             try {
                 fileBuffer = fs.readFileSync(fileList[i]);
             } catch (ex) {
+                console.error('Failed to read schema at ' + fileList[i] + ' for schema validation.');
                 return reject(ex);
             }
 
@@ -69,6 +83,7 @@ async function _validateInputSchemas(fileList: Array<string>, options?: { breakO
             try {
                 valid = JSONSchema.validate(JSON.parse(fileBuffer.toString('utf-8')), schema);
             } catch (ex) {
+                console.error('Validation failed for schema at ' + fileList[i]);
                 return reject(ex);
             }
             
@@ -107,7 +122,8 @@ export async function convert (inputGlob: string, outputDirectory?: string, opti
     }
     
     try {
-        _fileList.push(...glob.sync(inputGlob));
+        _fileList = glob.sync(inputGlob);
+        console.log(_fileList);
     } catch (ex) {
         return console.error(ex);
     }

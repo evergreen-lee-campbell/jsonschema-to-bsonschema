@@ -47,6 +47,7 @@ var glob = __importStar(require("glob"));
 var fs = __importStar(require("fs"));
 var refParser = __importStar(require("json-schema-ref-parser"));
 var JSONSchema = __importStar(require("json-schema"));
+var path = __importStar(require("path"));
 function _transformSchemas(fileList, outputDirectory) {
     return __awaiter(this, void 0, void 0, function () {
         var _this = this;
@@ -55,23 +56,28 @@ function _transformSchemas(fileList, outputDirectory) {
                     var completedSchemas = 0;
                     fileList.forEach(function (fileName) {
                         fs.readFile(fileName, function (err, fileData) { return __awaiter(_this, void 0, void 0, function () {
-                            var schema, ex_1, outputFileName;
+                            var schema, baseUrl, ex_1, documentName, outputFileName;
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
                                     case 0:
                                         console.info('Reading ' + fileName);
-                                        if (err)
+                                        if (err) {
+                                            console.error('Failed to read ' + fileName);
                                             return [2 /*return*/, reject(err)];
+                                        }
                                         schema = null;
+                                        baseUrl = fileName.substring(0, fileName.lastIndexOf('/')) + '/';
+                                        console.log('Defaulting to the following baseUrl: ' + baseUrl);
                                         _a.label = 1;
                                     case 1:
                                         _a.trys.push([1, 3, , 4]);
-                                        return [4 /*yield*/, refParser.default.dereference(JSON.parse(fileData.toString('utf8')))];
+                                        return [4 /*yield*/, refParser.default.dereference(baseUrl, JSON.parse(fileData.toString('utf8')), {})];
                                     case 2:
                                         schema = _a.sent();
                                         return [3 /*break*/, 4];
                                     case 3:
                                         ex_1 = _a.sent();
+                                        console.error('Failed to dereference ' + fileName);
                                         return [2 /*return*/, reject(ex_1)];
                                     case 4:
                                         if (!schema) {
@@ -79,18 +85,18 @@ function _transformSchemas(fileList, outputDirectory) {
                                             return [2 /*return*/, reject(new Error("Schema was not dereferenced."))];
                                         }
                                         delete schema.definitions;
-                                        if (outputDirectory) {
-                                            // dunno yet
+                                        documentName = fileName.split('.json')[0];
+                                        outputFileName = (outputDirectory
+                                            ? outputDirectory + path.sep + documentName.split('/')[documentName.split('/').length - 1].split('.json')[0]
+                                            : documentName)
+                                            + '.bson';
+                                        console.log('Outputting to: ' + outputFileName);
+                                        try {
+                                            console.info('Writing file ' + outputFileName);
+                                            fs.writeFileSync(outputFileName, JSON.stringify(schema, null, 4));
                                         }
-                                        else {
-                                            try {
-                                                outputFileName = fileName.split('.json')[0] + ".bson";
-                                                console.info('Writing file ' + outputFileName);
-                                                fs.writeFileSync(outputFileName, JSON.stringify(schema, null, 4));
-                                            }
-                                            catch (ex) {
-                                                return [2 /*return*/, reject(ex)];
-                                            }
+                                        catch (ex) {
+                                            return [2 /*return*/, reject(ex)];
                                         }
                                         completedSchemas++;
                                         console.info('Dereferenced ' + completedSchemas + ' of ' + fileList.length + ' schemas ');
@@ -120,6 +126,7 @@ function _validateInputSchemas(fileList, options) {
                             fileBuffer = fs.readFileSync(fileList[i]);
                         }
                         catch (ex) {
+                            console.error('Failed to read schema at ' + fileList[i] + ' for schema validation.');
                             return reject(ex);
                         }
                         var valid = void 0;
@@ -127,6 +134,7 @@ function _validateInputSchemas(fileList, options) {
                             valid = JSONSchema.validate(JSON.parse(fileBuffer.toString('utf-8')), schema);
                         }
                         catch (ex) {
+                            console.error('Validation failed for schema at ' + fileList[i]);
                             return reject(ex);
                         }
                         if (valid.errors && valid.errors.length > 0) {
@@ -166,7 +174,8 @@ function convert(inputGlob, outputDirectory, options) {
                         console.info('No output directory specified, outputting each converted BSON schema in the same directory as its source JSON.');
                     }
                     try {
-                        _fileList.push.apply(_fileList, glob.sync(inputGlob));
+                        _fileList = glob.sync(inputGlob);
+                        console.log(_fileList);
                     }
                     catch (ex) {
                         return [2 /*return*/, console.error(ex)];
