@@ -4,7 +4,7 @@ import * as refParser from 'json-schema-ref-parser';
 import * as JSONSchema from 'json-schema';
 import * as path from 'path';
 
-async function _transformSchemas(fileList: Array<string>, outputDirectory?: string): Promise<void> {
+async function _transformSchemas(fileList: Array<string>, outputDirectory?: string, baseUrl?: string): Promise<void> {
     return new Promise((resolve, reject) => {
         let completedSchemas = 0;
         fileList.forEach(fileName => {
@@ -16,8 +16,8 @@ async function _transformSchemas(fileList: Array<string>, outputDirectory?: stri
                 }
 
                 let schema: refParser.JSONSchema | null = null;
-                let baseUrl = fileName.substring(0, fileName.lastIndexOf('/')) + '/';
-                console.log('Defaulting to the following baseUrl: ' + baseUrl);
+                baseUrl = baseUrl || fileName.substring(0, fileName.lastIndexOf(path.sep)) + path.sep;
+                console.log('Using the following basePath: ' + baseUrl);
 
                 try {
                     schema = await refParser.default.dereference(
@@ -117,6 +117,8 @@ async function _validateInputSchemas(fileList: Array<string>, options?: { breakO
 export async function convert (inputGlob: string, outputDirectory?: string, options?: any): Promise<void> {
     let _fileList: Array<string> = [];
 
+    if (!options) options = {};
+
     if (!outputDirectory) {
         console.info('No output directory specified, outputting each converted BSON schema in the same directory as its source JSON.');
     }
@@ -147,7 +149,7 @@ export async function convert (inputGlob: string, outputDirectory?: string, opti
     // once we've passed validation, create the BSON schemas from each of the JSON schemas...
     console.info('Beginning JSON -> BSON conversion.');
 
-    _transformSchemas(_fileList, outputDirectory).then(() => {
+    _transformSchemas(_fileList, outputDirectory, options.basePath).then(() => {
         console.log('Done!');
     }, (err: Error) => {
         console.error(err);
