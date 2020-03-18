@@ -48,7 +48,7 @@ var fs = __importStar(require("fs"));
 var refParser = __importStar(require("json-schema-ref-parser"));
 var JSONSchema = __importStar(require("json-schema"));
 var path = __importStar(require("path"));
-function _transformSchemas(fileList, outputDirectory) {
+function _transformSchemas(fileList, outputDirectory, baseUrl) {
     return __awaiter(this, void 0, void 0, function () {
         var _this = this;
         return __generator(this, function (_a) {
@@ -56,7 +56,7 @@ function _transformSchemas(fileList, outputDirectory) {
                     var completedSchemas = 0;
                     fileList.forEach(function (fileName) {
                         fs.readFile(fileName, function (err, fileData) { return __awaiter(_this, void 0, void 0, function () {
-                            var schema, baseUrl, ex_1, documentName, outputFileName;
+                            var schema, ex_1, documentName, outputFileName;
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
                                     case 0:
@@ -66,8 +66,8 @@ function _transformSchemas(fileList, outputDirectory) {
                                             return [2 /*return*/, reject(err)];
                                         }
                                         schema = null;
-                                        baseUrl = fileName.substring(0, fileName.lastIndexOf('/')) + '/';
-                                        console.log('Defaulting to the following baseUrl: ' + baseUrl);
+                                        baseUrl = baseUrl || fileName.substring(0, fileName.lastIndexOf(path.sep)) + path.sep;
+                                        console.log('Using the following basePath: ' + baseUrl);
                                         _a.label = 1;
                                     case 1:
                                         _a.trys.push([1, 3, , 4]);
@@ -170,6 +170,8 @@ function convert(inputGlob, outputDirectory, options) {
             switch (_a.label) {
                 case 0:
                     _fileList = [];
+                    if (!options)
+                        options = {};
                     if (!outputDirectory) {
                         console.info('No output directory specified, outputting each converted BSON schema in the same directory as its source JSON.');
                     }
@@ -199,7 +201,7 @@ function convert(inputGlob, outputDirectory, options) {
                     }
                     // once we've passed validation, create the BSON schemas from each of the JSON schemas...
                     console.info('Beginning JSON -> BSON conversion.');
-                    _transformSchemas(_fileList, outputDirectory).then(function () {
+                    _transformSchemas(_fileList, outputDirectory, options.basePath).then(function () {
                         console.log('Done!');
                     }, function (err) {
                         console.error(err);
