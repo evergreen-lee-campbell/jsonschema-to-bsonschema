@@ -103,8 +103,6 @@ function _deduplicateBsonTypes(schema: any): any {
         }
     }
 
-    console.log('Finished de-duplicating...');
-
     return schema;
 }
 
@@ -119,8 +117,25 @@ function _deduplicateBsonTypes(schema: any): any {
  */
 function _convertBsonTypes(schema: any) {
     for (let i in schema) {
-
+        if (typeof schema[i] !== 'object') continue;
+        switch (schema[i].format) {
+            case "email":
+                schema[i].bsonType = "string";
+                delete schema[i].format;
+                delete schema[i].type;
+                break;
+            case "date-time":
+                schema[i].bsonType = "date";
+                delete schema[i].format;
+                delete schema[i].type;
+                break;
+            default:
+                _convertBsonTypes(schema[i]);
+                break;
+        }
     }
+
+    return schema;
 }
 
 async function _validateInputSchemas(fileList: Array<string>, options?: { breakOnSchemaValidationErrors: boolean, verbose: boolean }): Promise<{ valid: number, invalid: number }> {

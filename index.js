@@ -97,6 +97,8 @@ function _transformSchemas(fileList, outputDirectory, baseUrl) {
                             delete schema.definitions;
                             // de-duplicate the bsonType and type elements:
                             _deduplicateBsonTypes(schema);
+                            // convert some formatted types to bsonTypes:
+                            _convertBsonTypes(schema);
                             console.log('Completed all depths of de-duplication:');
                             console.log(schema);
                             documentName = fileName.split('.json')[0];
@@ -128,7 +130,7 @@ function _transformSchemas(fileList, outputDirectory, baseUrl) {
         });
     });
 }
-function _deduplicateBsonTypes(schema, parent, currentName) {
+function _deduplicateBsonTypes(schema) {
     for (var i in schema) {
         if (typeof schema[i] !== 'object')
             continue;
@@ -142,51 +144,37 @@ function _deduplicateBsonTypes(schema, parent, currentName) {
             _deduplicateBsonTypes(schema[i]);
         }
     }
-    console.log('Finished de-duplicating...');
     return schema;
-    /*if (!parent) parent = schema;
-    for (let i in schema) {
-        //console.log("Current name is: " + currentName);
-        //console.log("i is: " + i);
-        if (!currentName) currentName = i;
-        if (!schema.hasOwnProperty(i)) continue;
-        if (Array.isArray(schema)) {
+}
+/**
+ *
+ * @param schema
+ *
+ * @returns schema
+ *
+ * @summary Converts jsonSchema types to bsonTypes based upon their formatting etc.
+ * (e.g. type: 'string', format: 'date-time' -> bsonType: 'Date')
+ */
+function _convertBsonTypes(schema) {
+    for (var i in schema) {
+        if (typeof schema[i] !== 'object')
             continue;
-            for (let j in schema) {
-                _deduplicateBsonTypes(schema[j], parent, currentName);
-            }
-        }
-        if (typeof schema[i] === 'object') {
-            _deduplicateBsonTypes(schema[i], parent, i);
-        } else if (schema[i] === "type") {
-            console.log("Schema: " + JSON.stringify(schema));
-            console.log("Schema[i]: " + schema[i]);
-            console.log("parent: " + JSON.stringify(parent));
-            console.log("currentName: " + currentName);
-            if (schema.hasOwnProperty("bsonType")) {
-
-            }
-            delete parent[currentName];
+        switch (schema[i].format) {
+            case "email":
+                schema[i].bsonType = "string";
+                delete schema[i].format;
+                delete schema[i].type;
+                break;
+            case "date-time":
+                schema[i].bsonType = "date";
+                delete schema[i].format;
+                delete schema[i].type;
+                break;
+            default:
+                _convertBsonTypes(schema[i]);
+                break;
         }
     }
-
-    if (schema && schema.title && schema.title == "User") {
-        console.log('New schema: ');
-        console.log(schema);
-    }
-
-    return schema;*/
-    //let modifiableSchema = JSON.parse(JSON.stringify(schema));
-    var modifiableSchema = schema;
-    if (schema.properties)
-        Object.keys(modifiableSchema.properties).forEach(function (k) {
-            Object.keys(modifiableSchema.properties[k]).forEach(function (j) {
-                var propertyObject = modifiableSchema.properties[k][j];
-                if (propertyObject.hasOwnProperty("type") && propertyObject.hasOwnProperty("bsonType")) {
-                    delete propertyObject.type;
-                }
-            });
-        });
     return schema;
 }
 function _validateInputSchemas(fileList, options) {
