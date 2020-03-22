@@ -149,7 +149,7 @@ export async function convert (inputGlob: string, outputDirectory?: string, opti
     // once we've passed validation, create the BSON schemas from each of the JSON schemas...
     console.info('Beginning JSON -> BSON conversion.');
 
-    _transformSchemas(_fileList, outputDirectory, options.basePath).then(() => {
+    _transformSchemas(_fileList, outputDirectory, options.cwd).then(() => {
         console.log('Done!');
     }, (err: Error) => {
         console.error(err);

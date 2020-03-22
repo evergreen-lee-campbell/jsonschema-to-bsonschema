@@ -201,7 +201,7 @@ function convert(inputGlob, outputDirectory, options) {
                     }
                     // once we've passed validation, create the BSON schemas from each of the JSON schemas...
                     console.info('Beginning JSON -> BSON conversion.');
-                    _transformSchemas(_fileList, outputDirectory, options.basePath).then(function () {
+                    _transformSchemas(_fileList, outputDirectory, options.cwd).then(function () {
                         console.log('Done!');
                     }, function (err) {
                         console.error(err);
