@@ -3,63 +3,124 @@ import * as fs from 'fs';
 import * as refParser from 'json-schema-ref-parser';
 import * as JSONSchema from 'json-schema';
 import * as path from 'path';
+import { MongoClient, Db } from 'mongodb';
 
-async function _transformSchemas(fileList: Array<string>, outputDirectory?: string, baseUrl?: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-        let completedSchemas = 0;
-        fileList.forEach(fileName => {
-            fs.readFile(fileName, async (err, fileData) => {
-                console.info('Reading ' + fileName);
-                if (err) {
-                    console.error('Failed to read ' + fileName);
-                    return reject(err);
-                }
+async function _transformSchemas(fileList: Array<string>, outputDirectory?: string, baseUrl?: string): Promise<any> {
+    let completedSchemas = 0;
 
-                let schema: refParser.JSONSchema | null = null;
-                baseUrl = baseUrl || fileName.substring(0, fileName.lastIndexOf(path.sep)) + path.sep;
-                console.log('Using the following basePath: ' + baseUrl);
+    fileList.forEach(async fileName => {
+        let fileData;
+        try {
+            fileData = fs.readFileSync(fileName);
+        } catch (ex) {
+            console.error(ex);
+            throw ex;
+        }
 
-                try {
-                    schema = await refParser.default.dereference(
-                        baseUrl,
-                        JSON.parse(fileData.toString('utf8')), 
-                        {});
-                } catch (ex) {
-                    console.error('Failed to dereference ' + fileName);
-                    return reject(ex);
-                }
+        let schema: refParser.JSONSchema | null = null;
+        console.log('Received the following working directory: ' + baseUrl);
 
-                if (!schema) {
-                    console.error('Schema was not dereferenced.');
-                    return reject(new Error("Schema was not dereferenced."));
-                }
-                
-                delete schema.definitions;
-                
-                let documentName = fileName.split('.json')[0];
-                let outputFileName = (outputDirectory 
-                    ? outputDirectory + path.sep + documentName.split('/')[documentName.split('/').length - 1].split('.json')[0] 
-                    : documentName) 
-                    + '.bson';
-                
-                console.log('Outputting to: ' + outputFileName);
+        if (!baseUrl) {
+            console.log('Attempting to determine working directory from input glob...');
+            console.log('fileName is: ' + fileName);
+            //console.log(fileName.substring(0, fileName.lastIndexOf(path.sep)));
+            //baseUrl = `${fileName.substring(0, fileName.lastIndexOf(path.sep))}${path.sep}`;
 
-                try {
-                    console.info('Writing file ' + outputFileName);
-                    fs.writeFileSync(outputFileName, JSON.stringify(schema, null, 4));
-                } catch (ex) {
-                    return reject(ex);
-                }
+            console.log(fileName.substring(0, fileName.lastIndexOf('/')));
+            baseUrl = `${fileName.substring(0, fileName.lastIndexOf('/'))}/`;
+        }
 
-                completedSchemas++;
-                console.info('Dereferenced ' + completedSchemas + ' of ' + fileList.length + ' schemas ');
-            
-                if (completedSchemas === fileList.length) {
-                    resolve();
-                }
-            });
-        });
+        //baseUrl = baseUrl || (fileName.substring(0, fileName.lastIndexOf(path.sep)) + path.sep);
+        console.log('Using the following basePath: ' + baseUrl);
+
+        try {
+            schema = await refParser.default.dereference(
+                baseUrl,
+                JSON.parse(fileData.toString('utf8')), 
+                {});
+        } catch (ex) {
+            console.error('Failed to dereference ' + fileName);
+            throw ex;
+        }
+
+        if (!schema) {
+            console.error('Schema was not dereferenced.');
+            throw new Error("Schema was not dereferenced.");
+        }
+        
+        delete schema.definitions;
+
+        // de-duplicate the bsonType and type elements:
+        _deduplicateBsonTypes(schema);
+
+        // convert some formatted types to bsonTypes:
+        _convertBsonTypes(schema);
+
+        console.log('Completed all depths of de-duplication:');
+        console.log(schema);
+        
+        let documentName = fileName.split('.json')[0];
+        /*let outputFileName = (outputDirectory 
+            ? outputDirectory + path.sep + documentName.split(path.sep)[documentName.split(path.sep).length - 1].split('.json')[0] 
+            : documentName) 
+            + '.bson';*/
+
+        let outputFileName = (outputDirectory 
+            ? outputDirectory + '/' + documentName.split('/')[documentName.split('/').length - 1].split('.json')[0] 
+            : documentName) 
+            + '.bson';
+        
+        console.log('Outputting to: ' + outputFileName);
+
+        try {
+            console.info('Writing file ' + outputFileName);
+            fs.writeFileSync(outputFileName, JSON.stringify(schema, null, 4));
+        } catch (ex) {
+            throw ex;
+        }
+
+        completedSchemas++;
+    
+        if (completedSchemas === fileList.length) {
+            console.info('Dereferenced ' + completedSchemas + ' of ' + fileList.length + ' schemas ');
+            return true;
+        } else {
+            console.info('Dereferenced ' + completedSchemas + ' of ' + fileList.length + ' schemas ');
+        }
     });
+}
+
+function _deduplicateBsonTypes(schema: any): any {
+    for (let i in schema) {
+        if (typeof schema[i] !== 'object') continue;
+        if (Array.isArray(schema[i])) continue;
+
+        if (schema[i].hasOwnProperty("type") && schema[i].hasOwnProperty("bsonType")) {
+            console.log('i: ' + i);
+            delete schema[i].type;
+        } else if (typeof schema[i] === 'object') {
+            _deduplicateBsonTypes(schema[i]);
+        }
+    }
+
+    console.log('Finished de-duplicating...');
+
+    return schema;
+}
+
+/**
+ * 
+ * @param schema 
+ * 
+ * @returns schema
+ * 
+ * @summary Converts jsonSchema types to bsonTypes based upon their formatting etc. 
+ * (e.g. type: 'string', format: 'date-time' -> bsonType: 'Date')
+ */
+function _convertBsonTypes(schema: any) {
+    for (let i in schema) {
+
+    }
 }
 
 async function _validateInputSchemas(fileList: Array<string>, options?: { breakOnSchemaValidationErrors: boolean, verbose: boolean }): Promise<{ valid: number, invalid: number }> {
@@ -112,12 +173,18 @@ async function _validateInputSchemas(fileList: Array<string>, options?: { breakO
             invalid: invalidCount
         });
     });
-}    
+}
 
-export async function convert (inputGlob: string, outputDirectory?: string, options?: any): Promise<void> {
+class ConversionOptions {
+    cwd?: string;
+    verbose: boolean = false;
+    breakOnSchemaValidationErrors: boolean = false;
+}
+
+export async function convert (inputGlob: string, outputDirectory?: string, options?: ConversionOptions): Promise<void> {
     let _fileList: Array<string> = [];
 
-    if (!options) options = {};
+    if (!options) options = new ConversionOptions();
 
     if (!outputDirectory) {
         console.info('No output directory specified, outputting each converted BSON schema in the same directory as its source JSON.');
@@ -149,11 +216,79 @@ export async function convert (inputGlob: string, outputDirectory?: string, opti
     // once we've passed validation, create the BSON schemas from each of the JSON schemas...
     console.info('Beginning JSON -> BSON conversion.');
 
-    _transformSchemas(_fileList, outputDirectory, options.cwd).then(() => {
-        console.log('Done!');
-    }, (err: Error) => {
-        console.error(err);
+    try {
+        await _transformSchemas(_fileList, outputDirectory, options.cwd);
+        console.log("Done!");
+    } catch (ex) {
+        console.log(ex);
+        throw ex;
+    }
+}
+
+class DeploymentOptions {
+    connectionString?: string;
+    fileNamesAsCollectionNames?: boolean;
+}
+
+export async function deploy(bsonSchemaGlob: string, deploymentOptions: DeploymentOptions) {
+    // default to the title of the schema as the collection name:
+    let fileList = glob.sync(bsonSchemaGlob);
+    //let fileList = glob.sync("..\\nimme-server\\src\\schemas\\user\\schema.bson");
+
+    if (!deploymentOptions.connectionString) throw new Error('Connection string not defined.');
+
+    let conn: MongoClient;
+
+    try {
+        console.log('Connecting to db: ' + deploymentOptions.connectionString);
+        conn = await MongoClient.connect(deploymentOptions.connectionString || '');
+    } catch (ex) {
+        console.error(ex);
+        throw ex;
+    }
+
+    let promises: Array<Promise<any>> = [];
+
+    console.log('The file-list: ');
+    console.log(fileList);
+    
+    fileList.forEach(async f => {
+        if (f.toLowerCase().indexOf('address') > -1) {
+            console.log('ignoring collection...');
+        } else {
+            try {
+                let db: Db = conn.db("nimme");
+                console.log('Connected to DB: ');
+                console.log(db);
+    
+                console.log('Reading file: ' + f);
+                let file = JSON.parse(fs.readFileSync(f).toString('utf8'));
+    
+                console.log('Read and parsed file: ' + f);
+        
+                console.log('Adding validator for file: ' + f);
+    
+                console.log('Parsed file: ');
+                console.log(file);
+    
+                await db.createCollection(file.title);
+                promises.push(db.command({collMod: file.title, validator: { $jsonSchema: file }}));
+        
+            } catch (ex) {
+                console.error(ex);
+                throw ex;
+            }
+        }
     });
+
+    if (promises.length < 1) return;
+    
+    try {
+        await Promise.all(promises);
+    } catch (ex) {
+        console.error(ex);
+        throw ex;
+    }
 }
 
 let draft04schema = {

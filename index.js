@@ -47,70 +47,147 @@ var glob = __importStar(require("glob"));
 var fs = __importStar(require("fs"));
 var refParser = __importStar(require("json-schema-ref-parser"));
 var JSONSchema = __importStar(require("json-schema"));
-var path = __importStar(require("path"));
+var mongodb_1 = require("mongodb");
 function _transformSchemas(fileList, outputDirectory, baseUrl) {
     return __awaiter(this, void 0, void 0, function () {
+        var completedSchemas;
         var _this = this;
         return __generator(this, function (_a) {
-            return [2 /*return*/, new Promise(function (resolve, reject) {
-                    var completedSchemas = 0;
-                    fileList.forEach(function (fileName) {
-                        fs.readFile(fileName, function (err, fileData) { return __awaiter(_this, void 0, void 0, function () {
-                            var schema, ex_1, documentName, outputFileName;
-                            return __generator(this, function (_a) {
-                                switch (_a.label) {
-                                    case 0:
-                                        console.info('Reading ' + fileName);
-                                        if (err) {
-                                            console.error('Failed to read ' + fileName);
-                                            return [2 /*return*/, reject(err)];
-                                        }
-                                        schema = null;
-                                        baseUrl = baseUrl || fileName.substring(0, fileName.lastIndexOf(path.sep)) + path.sep;
-                                        console.log('Using the following basePath: ' + baseUrl);
-                                        _a.label = 1;
-                                    case 1:
-                                        _a.trys.push([1, 3, , 4]);
-                                        return [4 /*yield*/, refParser.default.dereference(baseUrl, JSON.parse(fileData.toString('utf8')), {})];
-                                    case 2:
-                                        schema = _a.sent();
-                                        return [3 /*break*/, 4];
-                                    case 3:
-                                        ex_1 = _a.sent();
-                                        console.error('Failed to dereference ' + fileName);
-                                        return [2 /*return*/, reject(ex_1)];
-                                    case 4:
-                                        if (!schema) {
-                                            console.error('Schema was not dereferenced.');
-                                            return [2 /*return*/, reject(new Error("Schema was not dereferenced."))];
-                                        }
-                                        delete schema.definitions;
-                                        documentName = fileName.split('.json')[0];
-                                        outputFileName = (outputDirectory
-                                            ? outputDirectory + path.sep + documentName.split('/')[documentName.split('/').length - 1].split('.json')[0]
-                                            : documentName)
-                                            + '.bson';
-                                        console.log('Outputting to: ' + outputFileName);
-                                        try {
-                                            console.info('Writing file ' + outputFileName);
-                                            fs.writeFileSync(outputFileName, JSON.stringify(schema, null, 4));
-                                        }
-                                        catch (ex) {
-                                            return [2 /*return*/, reject(ex)];
-                                        }
-                                        completedSchemas++;
-                                        console.info('Dereferenced ' + completedSchemas + ' of ' + fileList.length + ' schemas ');
-                                        if (completedSchemas === fileList.length) {
-                                            resolve();
-                                        }
-                                        return [2 /*return*/];
-                                }
-                            });
-                        }); });
-                    });
-                })];
+            completedSchemas = 0;
+            fileList.forEach(function (fileName) { return __awaiter(_this, void 0, void 0, function () {
+                var fileData, schema, ex_1, documentName, outputFileName;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            try {
+                                fileData = fs.readFileSync(fileName);
+                            }
+                            catch (ex) {
+                                console.error(ex);
+                                throw ex;
+                            }
+                            schema = null;
+                            console.log('Received the following working directory: ' + baseUrl);
+                            if (!baseUrl) {
+                                console.log('Attempting to determine working directory from input glob...');
+                                console.log('fileName is: ' + fileName);
+                                //console.log(fileName.substring(0, fileName.lastIndexOf(path.sep)));
+                                //baseUrl = `${fileName.substring(0, fileName.lastIndexOf(path.sep))}${path.sep}`;
+                                console.log(fileName.substring(0, fileName.lastIndexOf('/')));
+                                baseUrl = fileName.substring(0, fileName.lastIndexOf('/')) + "/";
+                            }
+                            //baseUrl = baseUrl || (fileName.substring(0, fileName.lastIndexOf(path.sep)) + path.sep);
+                            console.log('Using the following basePath: ' + baseUrl);
+                            _a.label = 1;
+                        case 1:
+                            _a.trys.push([1, 3, , 4]);
+                            return [4 /*yield*/, refParser.default.dereference(baseUrl, JSON.parse(fileData.toString('utf8')), {})];
+                        case 2:
+                            schema = _a.sent();
+                            return [3 /*break*/, 4];
+                        case 3:
+                            ex_1 = _a.sent();
+                            console.error('Failed to dereference ' + fileName);
+                            throw ex_1;
+                        case 4:
+                            if (!schema) {
+                                console.error('Schema was not dereferenced.');
+                                throw new Error("Schema was not dereferenced.");
+                            }
+                            delete schema.definitions;
+                            // de-duplicate the bsonType and type elements:
+                            _deduplicateBsonTypes(schema);
+                            console.log('Completed all depths of de-duplication:');
+                            console.log(schema);
+                            documentName = fileName.split('.json')[0];
+                            outputFileName = (outputDirectory
+                                ? outputDirectory + '/' + documentName.split('/')[documentName.split('/').length - 1].split('.json')[0]
+                                : documentName)
+                                + '.bson';
+                            console.log('Outputting to: ' + outputFileName);
+                            try {
+                                console.info('Writing file ' + outputFileName);
+                                fs.writeFileSync(outputFileName, JSON.stringify(schema, null, 4));
+                            }
+                            catch (ex) {
+                                throw ex;
+                            }
+                            completedSchemas++;
+                            if (completedSchemas === fileList.length) {
+                                console.info('Dereferenced ' + completedSchemas + ' of ' + fileList.length + ' schemas ');
+                                return [2 /*return*/, true];
+                            }
+                            else {
+                                console.info('Dereferenced ' + completedSchemas + ' of ' + fileList.length + ' schemas ');
+                            }
+                            return [2 /*return*/];
+                    }
+                });
+            }); });
+            return [2 /*return*/];
         });
     });
+}
+function _deduplicateBsonTypes(schema, parent, currentName) {
+    for (var i in schema) {
+        if (typeof schema[i] !== 'object')
+            continue;
+        if (Array.isArray(schema[i]))
+            continue;
+        if (schema[i].hasOwnProperty("type") && schema[i].hasOwnProperty("bsonType")) {
+            console.log('i: ' + i);
+            delete schema[i].type;
+        }
+        else if (typeof schema[i] === 'object') {
+            _deduplicateBsonTypes(schema[i]);
+        }
+    }
+    console.log('Finished de-duplicating...');
+    return schema;
+    /*if (!parent) parent = schema;
+    for (let i in schema) {
+        //console.log("Current name is: " + currentName);
+        //console.log("i is: " + i);
+        if (!currentName) currentName = i;
+        if (!schema.hasOwnProperty(i)) continue;
+        if (Array.isArray(schema)) {
+            continue;
+            for (let j in schema) {
+                _deduplicateBsonTypes(schema[j], parent, currentName);
+            }
+        }
+        if (typeof schema[i] === 'object') {
+            _deduplicateBsonTypes(schema[i], parent, i);
+        } else if (schema[i] === "type") {
+            console.log("Schema: " + JSON.stringify(schema));
+            console.log("Schema[i]: " + schema[i]);
+            console.log("parent: " + JSON.stringify(parent));
+            console.log("currentName: " + currentName);
+            if (schema.hasOwnProperty("bsonType")) {
+
+            }
+            delete parent[currentName];
+        }
+    }
+
+    if (schema && schema.title && schema.title == "User") {
+        console.log('New schema: ');
+        console.log(schema);
+    }
+
+    return schema;*/
+    //let modifiableSchema = JSON.parse(JSON.stringify(schema));
+    var modifiableSchema = schema;
+    if (schema.properties)
+        Object.keys(modifiableSchema.properties).forEach(function (k) {
+            Object.keys(modifiableSchema.properties[k]).forEach(function (j) {
+                var propertyObject = modifiableSchema.properties[k][j];
+                if (propertyObject.hasOwnProperty("type") && propertyObject.hasOwnProperty("bsonType")) {
+                    delete propertyObject.type;
+                }
+            });
+        });
+    return schema;
 }
 function _validateInputSchemas(fileList, options) {
     return __awaiter(this, void 0, void 0, function () {
@@ -163,15 +240,22 @@ function _validateInputSchemas(fileList, options) {
         });
     });
 }
+var ConversionOptions = /** @class */ (function () {
+    function ConversionOptions() {
+        this.verbose = false;
+        this.breakOnSchemaValidationErrors = false;
+    }
+    return ConversionOptions;
+}());
 function convert(inputGlob, outputDirectory, options) {
     return __awaiter(this, void 0, void 0, function () {
-        var _fileList, validationResults, ex_2;
+        var _fileList, validationResults, ex_2, ex_3;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     _fileList = [];
                     if (!options)
-                        options = {};
+                        options = new ConversionOptions();
                     if (!outputDirectory) {
                         console.info('No output directory specified, outputting each converted BSON schema in the same directory as its source JSON.');
                     }
@@ -201,17 +285,107 @@ function convert(inputGlob, outputDirectory, options) {
                     }
                     // once we've passed validation, create the BSON schemas from each of the JSON schemas...
                     console.info('Beginning JSON -> BSON conversion.');
-                    _transformSchemas(_fileList, outputDirectory, options.cwd).then(function () {
-                        console.log('Done!');
-                    }, function (err) {
-                        console.error(err);
-                    });
-                    return [2 /*return*/];
+                    _a.label = 5;
+                case 5:
+                    _a.trys.push([5, 7, , 8]);
+                    return [4 /*yield*/, _transformSchemas(_fileList, outputDirectory, options.cwd)];
+                case 6:
+                    _a.sent();
+                    console.log("Done!");
+                    return [3 /*break*/, 8];
+                case 7:
+                    ex_3 = _a.sent();
+                    console.log(ex_3);
+                    throw ex_3;
+                case 8: return [2 /*return*/];
             }
         });
     });
 }
 exports.convert = convert;
+var DeploymentOptions = /** @class */ (function () {
+    function DeploymentOptions() {
+    }
+    return DeploymentOptions;
+}());
+function deploy(bsonSchemaGlob, deploymentOptions) {
+    return __awaiter(this, void 0, void 0, function () {
+        var fileList, conn, ex_4, promises, ex_5;
+        var _this = this;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    fileList = glob.sync(bsonSchemaGlob);
+                    //let fileList = glob.sync("..\\nimme-server\\src\\schemas\\user\\schema.bson");
+                    if (!deploymentOptions.connectionString)
+                        throw new Error('Connection string not defined.');
+                    _a.label = 1;
+                case 1:
+                    _a.trys.push([1, 3, , 4]);
+                    console.log('Connecting to db: ' + deploymentOptions.connectionString);
+                    return [4 /*yield*/, mongodb_1.MongoClient.connect(deploymentOptions.connectionString || '')];
+                case 2:
+                    conn = _a.sent();
+                    return [3 /*break*/, 4];
+                case 3:
+                    ex_4 = _a.sent();
+                    console.error(ex_4);
+                    throw ex_4;
+                case 4:
+                    promises = [];
+                    console.log('The file-list: ');
+                    console.log(fileList);
+                    fileList.forEach(function (f) { return __awaiter(_this, void 0, void 0, function () {
+                        var db, file, ex_6;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    if (!(f.toLowerCase().indexOf('address') > -1)) return [3 /*break*/, 1];
+                                    console.log('ignoring collection...');
+                                    return [3 /*break*/, 4];
+                                case 1:
+                                    _a.trys.push([1, 3, , 4]);
+                                    db = conn.db("nimme");
+                                    console.log('Connected to DB: ');
+                                    console.log(db);
+                                    console.log('Reading file: ' + f);
+                                    file = JSON.parse(fs.readFileSync(f).toString('utf8'));
+                                    console.log('Read and parsed file: ' + f);
+                                    console.log('Adding validator for file: ' + f);
+                                    console.log('Parsed file: ');
+                                    console.log(file);
+                                    return [4 /*yield*/, db.createCollection(file.title)];
+                                case 2:
+                                    _a.sent();
+                                    promises.push(db.command({ collMod: file.title, validator: { $jsonSchema: file } }));
+                                    return [3 /*break*/, 4];
+                                case 3:
+                                    ex_6 = _a.sent();
+                                    console.error(ex_6);
+                                    throw ex_6;
+                                case 4: return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    if (promises.length < 1)
+                        return [2 /*return*/];
+                    _a.label = 5;
+                case 5:
+                    _a.trys.push([5, 7, , 8]);
+                    return [4 /*yield*/, Promise.all(promises)];
+                case 6:
+                    _a.sent();
+                    return [3 /*break*/, 8];
+                case 7:
+                    ex_5 = _a.sent();
+                    console.error(ex_5);
+                    throw ex_5;
+                case 8: return [2 /*return*/];
+            }
+        });
+    });
+}
+exports.deploy = deploy;
 var draft04schema = {
     "id": "http://json-schema.org/draft-04/schema#",
     "$schema": "http://json-schema.org/draft-04/schema#",
