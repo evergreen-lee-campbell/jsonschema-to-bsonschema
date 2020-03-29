@@ -320,7 +320,7 @@ function deploy(bsonSchemaGlob, deploymentOptions) {
                     console.error(ex_4);
                     throw ex_4;
                 case 4:
-                    db = conn.db(deploymentOptions.connectionString.substring(deploymentOptions.connectionString.lastIndexOf('/')));
+                    db = conn.db();
                     console.log('Connected to DB: ');
                     console.log(db);
                     _b = (_a = console).log;
