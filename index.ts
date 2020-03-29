@@ -248,15 +248,16 @@ class DeploymentOptions {
 export async function deploy(bsonSchemaGlob: string, deploymentOptions: DeploymentOptions) {
     // default to the title of the schema as the collection name:
     let fileList = glob.sync(bsonSchemaGlob);
-    //let fileList = glob.sync("..\\nimme-server\\src\\schemas\\user\\schema.bson");
 
     if (!deploymentOptions.connectionString) throw new Error('Connection string not defined.');
+
+    deploymentOptions.connectionString = deploymentOptions.connectionString || '';
 
     let conn: MongoClient;
 
     try {
         console.log('Connecting to db: ' + deploymentOptions.connectionString);
-        conn = await MongoClient.connect(deploymentOptions.connectionString || '');
+        conn = await MongoClient.connect(deploymentOptions.connectionString);
     } catch (ex) {
         console.error(ex);
         throw ex;
@@ -272,7 +273,8 @@ export async function deploy(bsonSchemaGlob: string, deploymentOptions: Deployme
             console.log('ignoring collection...');
         } else {
             try {
-                let db: Db = conn.db("nimme");
+                // crudely connect to DB, strip off query string arguments later...
+                let db: Db = conn.db(deploymentOptions.connectionString!.substring(deploymentOptions.connectionString!.lastIndexOf('/')));
                 console.log('Connected to DB: ');
                 console.log(db);
     
