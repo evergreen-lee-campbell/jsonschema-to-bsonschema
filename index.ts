@@ -267,7 +267,7 @@ export async function deploy(bsonSchemaGlob: string, deploymentOptions: Deployme
     console.log('Connected to DB: ');
     console.log(db);
 
-    console.log(await db.listCollections().toArray());
+    let collectionNames: string[] = await (await db.listCollections().toArray()).map(c => c.Name);
 
     let promises: Array<Promise<any>> = [];
 
@@ -288,8 +288,11 @@ export async function deploy(bsonSchemaGlob: string, deploymentOptions: Deployme
     
                 console.log('Parsed file: ');
                 console.log(file);
-    
-                await db.createCollection(file.title);
+
+                if (!collectionNames.find(n => n === file.title)) {
+                    await db.createCollection(file.title);
+                }
+
                 promises.push(db.command({collMod: file.title, validator: { $jsonSchema: file }}));
         
             } catch (ex) {
