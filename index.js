@@ -159,6 +159,8 @@ function _convertBsonTypes(schema) {
     for (var i in schema) {
         if (typeof schema[i] !== 'object')
             continue;
+        if (schema.unique)
+            delete schema.unique;
         switch (schema[i].format) {
             case "email":
                 schema[i].bsonType = "string";
@@ -298,81 +300,84 @@ var DeploymentOptions = /** @class */ (function () {
 }());
 function deploy(bsonSchemaGlob, deploymentOptions) {
     return __awaiter(this, void 0, void 0, function () {
-        var fileList, conn, ex_4, db, _a, _b, promises, ex_5;
+        var fileList, conn, ex_4, db, collectionNames, promises, ex_5;
         var _this = this;
-        return __generator(this, function (_c) {
-            switch (_c.label) {
+        return __generator(this, function (_a) {
+            switch (_a.label) {
                 case 0:
                     fileList = glob.sync(bsonSchemaGlob);
                     if (!deploymentOptions.connectionString)
                         throw new Error('Connection string not defined.');
                     deploymentOptions.connectionString = deploymentOptions.connectionString || '';
-                    _c.label = 1;
+                    _a.label = 1;
                 case 1:
-                    _c.trys.push([1, 3, , 4]);
+                    _a.trys.push([1, 3, , 4]);
                     console.log('Connecting to db: ' + deploymentOptions.connectionString);
                     return [4 /*yield*/, mongodb_1.MongoClient.connect(deploymentOptions.connectionString)];
                 case 2:
-                    conn = _c.sent();
+                    conn = _a.sent();
                     return [3 /*break*/, 4];
                 case 3:
-                    ex_4 = _c.sent();
+                    ex_4 = _a.sent();
                     console.error(ex_4);
                     throw ex_4;
                 case 4:
                     db = conn.db();
                     console.log('Connected to DB: ');
                     console.log(db);
-                    _b = (_a = console).log;
                     return [4 /*yield*/, db.listCollections().toArray()];
-                case 5:
-                    _b.apply(_a, [_c.sent()]);
+                case 5: return [4 /*yield*/, (_a.sent()).map(function (c) { return c.Name; })];
+                case 6:
+                    collectionNames = _a.sent();
                     promises = [];
                     console.log('The file-list: ');
                     console.log(fileList);
                     fileList.forEach(function (f) { return __awaiter(_this, void 0, void 0, function () {
-                        var file, ex_6;
+                        var file_1, ex_6;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
                                     if (!(f.toLowerCase().indexOf('address') > -1)) return [3 /*break*/, 1];
                                     console.log('ignoring collection...');
-                                    return [3 /*break*/, 4];
+                                    return [3 /*break*/, 5];
                                 case 1:
-                                    _a.trys.push([1, 3, , 4]);
+                                    _a.trys.push([1, 4, , 5]);
                                     console.log('Reading file: ' + f);
-                                    file = JSON.parse(fs.readFileSync(f).toString('utf8'));
+                                    file_1 = JSON.parse(fs.readFileSync(f).toString('utf8'));
                                     console.log('Read and parsed file: ' + f);
                                     console.log('Adding validator for file: ' + f);
                                     console.log('Parsed file: ');
-                                    console.log(file);
-                                    return [4 /*yield*/, db.createCollection(file.title)];
+                                    console.log(file_1);
+                                    if (!!collectionNames.find(function (n) { return n === file_1.title; })) return [3 /*break*/, 3];
+                                    return [4 /*yield*/, db.createCollection(file_1.title)];
                                 case 2:
                                     _a.sent();
-                                    promises.push(db.command({ collMod: file.title, validator: { $jsonSchema: file } }));
-                                    return [3 /*break*/, 4];
+                                    _a.label = 3;
                                 case 3:
+                                    promises.push(db.command({ collMod: file_1.title, validator: { $jsonSchema: file_1 } }));
+                                    return [3 /*break*/, 5];
+                                case 4:
                                     ex_6 = _a.sent();
                                     console.error(ex_6);
                                     throw ex_6;
-                                case 4: return [2 /*return*/];
+                                case 5: return [2 /*return*/];
                             }
                         });
                     }); });
                     if (promises.length < 1)
                         return [2 /*return*/];
-                    _c.label = 6;
-                case 6:
-                    _c.trys.push([6, 8, , 9]);
-                    return [4 /*yield*/, Promise.all(promises)];
+                    _a.label = 7;
                 case 7:
-                    _c.sent();
-                    return [3 /*break*/, 9];
+                    _a.trys.push([7, 9, , 10]);
+                    return [4 /*yield*/, Promise.all(promises)];
                 case 8:
-                    ex_5 = _c.sent();
+                    _a.sent();
+                    return [3 /*break*/, 10];
+                case 9:
+                    ex_5 = _a.sent();
                     console.error(ex_5);
                     throw ex_5;
-                case 9: return [2 /*return*/];
+                case 10: return [2 /*return*/];
             }
         });
     });

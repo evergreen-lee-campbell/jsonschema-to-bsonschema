@@ -118,6 +118,9 @@ function _deduplicateBsonTypes(schema: any): any {
 function _convertBsonTypes(schema: any) {
     for (let i in schema) {
         if (typeof schema[i] !== 'object') continue;
+
+        if (schema.unique) delete schema.unique;
+
         switch (schema[i].format) {
             case "email":
                 schema[i].bsonType = "string";
