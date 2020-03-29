@@ -263,7 +263,7 @@ export async function deploy(bsonSchemaGlob: string, deploymentOptions: Deployme
         throw ex;
     }
 
-    let db: Db = conn.db(deploymentOptions.connectionString!.substring(deploymentOptions.connectionString!.lastIndexOf('/') + 1));
+    let db: Db = conn.db();
     console.log('Connected to DB: ');
     console.log(db);
 
