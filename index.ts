@@ -119,7 +119,7 @@ function _convertBsonTypes(schema: any) {
     for (let i in schema) {
         if (typeof schema[i] !== 'object') continue;
 
-        if (schema.unique) delete schema.unique;
+        if (schema[i].unique) delete schema[i].unique;
 
         switch (schema[i].format) {
             case "email":
