@@ -263,6 +263,12 @@ export async function deploy(bsonSchemaGlob: string, deploymentOptions: Deployme
         throw ex;
     }
 
+    let db: Db = conn.db(deploymentOptions.connectionString!.substring(deploymentOptions.connectionString!.lastIndexOf('/')));
+    console.log('Connected to DB: ');
+    console.log(db);
+
+    console.log(await db.listCollections().toArray());
+
     let promises: Array<Promise<any>> = [];
 
     console.log('The file-list: ');
@@ -273,11 +279,6 @@ export async function deploy(bsonSchemaGlob: string, deploymentOptions: Deployme
             console.log('ignoring collection...');
         } else {
             try {
-                // crudely connect to DB, strip off query string arguments later...
-                let db: Db = conn.db(deploymentOptions.connectionString!.substring(deploymentOptions.connectionString!.lastIndexOf('/')));
-                console.log('Connected to DB: ');
-                console.log(db);
-    
                 console.log('Reading file: ' + f);
                 let file = JSON.parse(fs.readFileSync(f).toString('utf8'));
     

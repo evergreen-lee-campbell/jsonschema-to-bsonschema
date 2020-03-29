@@ -1,6 +1,6 @@
 {
   "name": "jsonschema-to-bsonschema",
-  "version": "0.0.18",
+  "version": "0.0.19",
   "description": "Converts JSON schemas to BSON schemas for MongoDB validators.",
   "main": "index.js",
   "types": "index.d.ts",

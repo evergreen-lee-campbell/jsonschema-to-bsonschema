@@ -298,33 +298,40 @@ var DeploymentOptions = /** @class */ (function () {
 }());
 function deploy(bsonSchemaGlob, deploymentOptions) {
     return __awaiter(this, void 0, void 0, function () {
-        var fileList, conn, ex_4, promises, ex_5;
+        var fileList, conn, ex_4, db, _a, _b, promises, ex_5;
         var _this = this;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
+        return __generator(this, function (_c) {
+            switch (_c.label) {
                 case 0:
                     fileList = glob.sync(bsonSchemaGlob);
-                    //let fileList = glob.sync("..\\nimme-server\\src\\schemas\\user\\schema.bson");
                     if (!deploymentOptions.connectionString)
                         throw new Error('Connection string not defined.');
-                    _a.label = 1;
+                    deploymentOptions.connectionString = deploymentOptions.connectionString || '';
+                    _c.label = 1;
                 case 1:
-                    _a.trys.push([1, 3, , 4]);
+                    _c.trys.push([1, 3, , 4]);
                     console.log('Connecting to db: ' + deploymentOptions.connectionString);
-                    return [4 /*yield*/, mongodb_1.MongoClient.connect(deploymentOptions.connectionString || '')];
+                    return [4 /*yield*/, mongodb_1.MongoClient.connect(deploymentOptions.connectionString)];
                 case 2:
-                    conn = _a.sent();
+                    conn = _c.sent();
                     return [3 /*break*/, 4];
                 case 3:
-                    ex_4 = _a.sent();
+                    ex_4 = _c.sent();
                     console.error(ex_4);
                     throw ex_4;
                 case 4:
+                    db = conn.db(deploymentOptions.connectionString.substring(deploymentOptions.connectionString.lastIndexOf('/')));
+                    console.log('Connected to DB: ');
+                    console.log(db);
+                    _b = (_a = console).log;
+                    return [4 /*yield*/, db.listCollections().toArray()];
+                case 5:
+                    _b.apply(_a, [_c.sent()]);
                     promises = [];
                     console.log('The file-list: ');
                     console.log(fileList);
                     fileList.forEach(function (f) { return __awaiter(_this, void 0, void 0, function () {
-                        var db, file, ex_6;
+                        var file, ex_6;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -333,9 +340,6 @@ function deploy(bsonSchemaGlob, deploymentOptions) {
                                     return [3 /*break*/, 4];
                                 case 1:
                                     _a.trys.push([1, 3, , 4]);
-                                    db = conn.db("nimme");
-                                    console.log('Connected to DB: ');
-                                    console.log(db);
                                     console.log('Reading file: ' + f);
                                     file = JSON.parse(fs.readFileSync(f).toString('utf8'));
                                     console.log('Read and parsed file: ' + f);
@@ -357,18 +361,18 @@ function deploy(bsonSchemaGlob, deploymentOptions) {
                     }); });
                     if (promises.length < 1)
                         return [2 /*return*/];
-                    _a.label = 5;
-                case 5:
-                    _a.trys.push([5, 7, , 8]);
-                    return [4 /*yield*/, Promise.all(promises)];
+                    _c.label = 6;
                 case 6:
-                    _a.sent();
-                    return [3 /*break*/, 8];
+                    _c.trys.push([6, 8, , 9]);
+                    return [4 /*yield*/, Promise.all(promises)];
                 case 7:
-                    ex_5 = _a.sent();
+                    _c.sent();
+                    return [3 /*break*/, 9];
+                case 8:
+                    ex_5 = _c.sent();
                     console.error(ex_5);
                     throw ex_5;
-                case 8: return [2 /*return*/];
+                case 9: return [2 /*return*/];
             }
         });
     });
