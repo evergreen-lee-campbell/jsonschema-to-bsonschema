@@ -374,6 +374,40 @@ function deploy(bsonSchemaGlob, deploymentOptions) {
     });
 }
 exports.deploy = deploy;
+function _createIndicesScripts(schema) {
+}
+function addIndices(bsonFileGlob) {
+    return __awaiter(this, void 0, void 0, function () {
+        var fileList, promises, ex_7;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    fileList = glob.sync(bsonFileGlob);
+                    promises = [];
+                    fileList.forEach(function (fileName) {
+                        // find all of the fields which have an index descriptor, and add a MongoClient command to create said index...
+                        var parsedFile = JSON.parse(fs.readFileSync(fileName).toString('utf8'));
+                        if (parsedFile.title) {
+                            _createIndicesScripts(parsedFile);
+                        }
+                    });
+                    _a.label = 1;
+                case 1:
+                    _a.trys.push([1, 3, , 4]);
+                    return [4 /*yield*/, Promise.all(promises)];
+                case 2:
+                    _a.sent();
+                    return [3 /*break*/, 4];
+                case 3:
+                    ex_7 = _a.sent();
+                    console.error(ex_7);
+                    throw ex_7;
+                case 4: return [2 /*return*/];
+            }
+        });
+    });
+}
+exports.addIndices = addIndices;
 var draft04schema = {
     "id": "http://json-schema.org/draft-04/schema#",
     "$schema": "http://json-schema.org/draft-04/schema#",

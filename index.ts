@@ -306,6 +306,31 @@ export async function deploy(bsonSchemaGlob: string, deploymentOptions: Deployme
     }
 }
 
+function _createIndicesScripts(schema: any) {
+    
+}
+
+export async function addIndices(bsonFileGlob: string) {
+    let fileList = glob.sync(bsonFileGlob);
+
+    let promises: Array<Promise<any>> = [];
+
+    fileList.forEach(fileName => {
+        // find all of the fields which have an index descriptor, and add a MongoClient command to create said index...
+        let parsedFile = JSON.parse(fs.readFileSync(fileName).toString('utf8'));
+        if (parsedFile.title) {
+            _createIndicesScripts(parsedFile);
+        }
+    });
+
+    try {
+        await Promise.all(promises);
+    } catch (ex) {
+        console.error(ex);
+        throw ex;
+    }
+}
+
 let draft04schema = {
     "id": "http://json-schema.org/draft-04/schema#",
     "$schema": "http://json-schema.org/draft-04/schema#",

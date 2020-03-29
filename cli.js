@@ -37,6 +37,10 @@ const argv = yargs.option('files', {
     alias: 'i',
     type: 'string',
     description: 'The glob string for the input schemas for deployment to the specified connection string.'
+}).options('addIndices', {
+    alias: 'a',
+    type: 'boolean',
+    description:'Attempt to add indices from the MongoDB schemas, extended to add uniqueness etc.'
 }).argv;
 
 json2bson.convert(argv.files, argv.outdir, {
@@ -46,7 +50,11 @@ json2bson.convert(argv.files, argv.outdir, {
 }).then(() => {
     if (!argv.deploy) return resolve();
     try {
-        json2bson.deploy(argv.input, { connectionString: argv.connectionString });
+        json2bson.deploy(argv.input, { connectionString: argv.connectionString }).then(() => {
+            if (argv.addIndices) {
+                json2bson.addIndices(argv.input).then(resolve, reject);
+            } else resolve();
+        })
     } catch (ex) {
         console.error(ex);
         reject(ex);
